@@ -31,7 +31,7 @@ app.get('/api/hello', function(req, res) {
 
 // URL SHORTENER
 let urlList = [];
-app.post('/api/shorturl', function(req, res,next) {
+app.post('/api/shorturl_experimental', function(req, res,next) {
 
   const bodyURL = req.body.url;
 
@@ -65,22 +65,53 @@ app.post('/api/shorturl', function(req, res,next) {
       });
     }
   });
+});
 
+app.post('/api/shorturl', function(req, res,next) {
+
+  const bodyURL = req.body.url;
+  const bodyURLhostname = urlparser.parse(bodyURL).hostname;
+
+  const checkURL = dns.lookup( bodyURLhostname , (err, address, family) => {
+    console.log('address: %j family: IPv%s', address, family);
+    return err,address;
+    });
+
+    console.log('checkURL', Object.keys(checkURL).length );
+    console.log('checkURL',checkURL );
+
+  if (Object.keys(checkURL).length === 0) {
+    next();
+  } else {
+
+    const short_url_id = urlList.length+1;
+    urlList.push( {
+      short_url_id: short_url_id,
+      original_url:bodyURL
+    });
+  
+    console.log('urlList',urlList)
+  
+    console.log('continuing...')
+    res.json({ 
+      original_url : bodyURL,
+      short_url : short_url_id 
+    });
+  }
 
   
-// } ,function(req,res){
-  // console.log('continuing in the next...')
-  // res.json({ error: 'invalid url' });
+} ,function(req,res){
+  console.log('continuing in the next...')
+  res.json({ error: 'invalid url' });
 
 });
 
 app.get('/api/shorturl/:short_url',function(req,res,next){
 
+  // to avoid starting with 0
   var short_url_id = req.params.short_url-1;
   var redirectURL = urlList[short_url_id].original_url;
 
-  console.log('GET short_url_id',short_url_id)
-  console.log('GET urlList',urlList)
   console.log('GET redirectURL',redirectURL)
 
   res.redirect(redirectURL);
